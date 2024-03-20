@@ -8,7 +8,7 @@ app.secret_key = os.urandom(24)
 
 # Hardcoded credentials (for demonstration purposes only)
 ADMIN_USERNAME = 'admin'
-ADMIN_PASSWORD = 'admin123'
+ADMIN_PASSWORD = '0zu9r2idf9c0tfcc4w26l66ij7visb8n'
 
 # Initialize the database
 conn = sqlite3.connect('blog.db')
