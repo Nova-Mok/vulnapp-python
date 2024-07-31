@@ -8,3 +8,47 @@ QQ123456B
 =QQ123456B
 = QQ123456B
 
+# True Positives Examples
+
+# Credit Card Number
+4111 1111 1111 1111
+
+# SSN
+123-45-6789
+
+# Email Address
+test@example.com
+
+# IP Address
+8.8.8.8
+
+# Phone Number
++1-800-555-1234
+
+# MAC Address
+00:1A:2B:3C:4D:5E
+
+# False Positives Examples
+
+# Random Number
+123456789
+
+# Local IP Address
+192.168.1.1
+
+# General text with digits
+The quick brown fox jumps over the 1234567890 lazy dogs.
+
+# Non-email like string
+notAnEmail@com
+
+# Non-phone like string
+123-abc-4567
+
+#CVV
+023
+-00
+000
+099
+P90
+
