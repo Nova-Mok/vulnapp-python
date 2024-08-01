@@ -8,14 +8,21 @@ QQ123456B
 =QQ123456B
 = QQ123456B
 
+#CVV
 2231
 691
 
+#Card
 3714 4963 5398 431
 4001 5900 0000 0001
 
+#Email
 omer@aquilax.com
 omer@gmail.com
 
+#Phone
 8310105079
 +1 831-010-5079
+
+#IP
+192.34.45.67
