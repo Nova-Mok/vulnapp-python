@@ -1,0 +1,15 @@
+name: Elevated Permissions Workflow
+
+on: [push, pull_request]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Elevated permissions
+      pull-requests: write # Elevated permissions allowing approval of pull requests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Deploy
+        run: echo "Deploying application"

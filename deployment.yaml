@@ -1,0 +1,24 @@
+# Insecure Kubernetes manifest
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: insecure-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+      - name: myapp-container
+        image: myapp:latest
+        ports:
+        - containerPort: 80
+        securityContext:
+          runAsUser: 0 # Insecure: Running as root
+          allowPrivilegeEscalation: true
