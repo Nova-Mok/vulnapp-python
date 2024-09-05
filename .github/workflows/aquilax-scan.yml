@@ -1,0 +1,44 @@
+name: AquilaX Security Scan
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  aquilax_scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Install AquilaX Client
+        run: pip install aquilax==1.0.0
+
+      - name: Run AquilaX Scan
+        env:
+          AQUILAX_AUTH: ${{ secrets.AQUILAX_API_TOKEN }}
+        run: |
+          aquilax scan --org-id "6691108b1985981c1f5d5b93" --group-id "66cc51d790da713a3f7c6075" --git-uri "${GITHUB_WORKSPACE}" --scanners "sast_scanner" "iac_scanner" --public True --frequency Once --tags "cicd" "audit"
+
+      - name: Upload Scan Results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: aquilax-scan-results
+          path: results.json
+
+      - name: Check for Vulnerabilities
+        if: ${{ steps.run_aquilax_scan.outcome == 'failure' }}
+        run: |
+          echo "Vulnerabilities detected. See results.json for details."
+          exit 1
