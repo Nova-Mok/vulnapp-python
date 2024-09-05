@@ -21,8 +21,10 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install AquilaX Client
-        run: pip install aquilax==1.0.0
+      - name: Install Dependencies
+        run: |
+          pip install aquilax==1.0.0
+          pip install requests_toolbelt
 
       - name: Run AquilaX Scan
         env:
