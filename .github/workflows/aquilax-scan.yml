@@ -31,7 +31,7 @@ jobs:
         env:
           AQUILAX_AUTH: ${{ secrets.AQUILAX_API_TOKEN }}
         run: |
-          scan_info=$(aquilax scan --org-id "6691108b1985981c1f5d5b93" --group-id "66cc51d790da713a3f7c6075" --git-uri "${{ github.repository_url }}" --scanners "sast_scanner" "iac_scanner" --public True --frequency Once --tags "cicd" "audit")
+          scan_info=$(aquilax scan --org-id "6691108b1985981c1f5d5b93" --group-id "66cc51d790da713a3f7c6075" --git-uri "https://github.com/AquilaX-AI/vulnapp-python" --scanners "sast_scanner" "iac_scanner" --public True --frequency Once --tags "cicd" "audit")
           echo "$scan_info" | jq
           SCAN_ID=$(echo "$scan_info" | jq -r '.scan_id')
           PROJECT_ID=$(echo "$scan_info" | jq -r '.project_id')
