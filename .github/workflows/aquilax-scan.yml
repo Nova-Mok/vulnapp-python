@@ -29,11 +29,19 @@ jobs:
         id: start_scan
         run: |
           scan_info=$(aquilax scan --org-id "6691108b1985981c1f5d5b93" --group-id "66cc51d790da713a3f7c6075" --git-uri "https://github.com/AquilaX-AI/vulnapp-python" --scanners "sast_scanner" "iac_scanner" --public True --frequency Once --tags "cicd" "audit")
-          echo "$scan_info" | jq
-          SCAN_ID=$(echo "$scan_info" | jq -r '.scan_id')
-          PROJECT_ID=$(echo "$scan_info" | jq -r '.project_id')
-          echo "SCAN_ID=$SCAN_ID" >> $GITHUB_ENV
-          echo "PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
+          
+          # Check if scan started successfully
+          if [[ "$scan_info" == *"scan_id"* ]]; then
+            echo "$scan_info" | jq
+            SCAN_ID=$(echo "$scan_info" | jq -r '.scan_id')
+            PROJECT_ID=$(echo "$scan_info" | jq -r '.project_id')
+            echo "SCAN_ID=$SCAN_ID" >> $GITHUB_ENV
+            echo "PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
+          else
+            echo "Error: Failed to start the scan."
+            echo "$scan_info"
+            exit 1
+          fi
 
       - name: Poll for Scan Completion
         run: |
@@ -61,7 +69,7 @@ jobs:
           vulns=$(jq -r '.scan.results[] | select(.findings != null) | .findings[]' scan_results.json)
           if [[ -n "$vulns" ]]; then
             echo "Vulnerabilities found!"
-            if [[ "${{ env.FAIL_ON_VULNS }}" == "true" ]]; then
+            if [[ "$FAIL_ON_VULNS" == "true" ]]; then
               echo "Failing the pipeline due to vulnerabilities..."
               exit 1
             else
