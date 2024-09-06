@@ -1,16 +1,16 @@
-name: Aquilax Scan
+name: AquilaX Security Scan
 
 on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  scan:
+  aquilax_scan:
     runs-on: ubuntu-latest
-    env:
-      FAIL_ON_VULNS: true 
-      AQUILAX_AUTH: ${{ secrets.AQUILAX_API_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -21,33 +21,22 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install Aquilax Client and jq
+      - name: Install Dependencies
         run: |
           pip install aquilax==1.1.6
           sudo apt-get install jq
 
-      - name: Start Aquilax Scan
+      - name: Run AquilaX Scan
         id: start_scan
+        env:
+          AQUILAX_AUTH: ${{ secrets.AQUILAX_API_TOKEN }}
         run: |
-          if [ -z "$AQUILAX_AUTH" ]; then
-            echo "AQUILAX_AUTH environment variable is not set. Please set it in your GitHub Secrets."
-            exit 1
-          fi
-
-          scan_info=$(aquilax scan --org-id "6691108b1985981c1f5d5b93" --group-id "66cc51d790da713a3f7c6075" --git-uri "https://github.com/AquilaX-AI/vulnapp-python" --scanners "sast_scanner" "iac_scanner" --public True --frequency Once --tags "cicd" "audit")
-          
-          # Check if scan started successfully
-          if [[ "$scan_info" == *"scan_id"* ]]; then
-            echo "$scan_info" | jq
-            SCAN_ID=$(echo "$scan_info" | jq -r '.scan_id')
-            PROJECT_ID=$(echo "$scan_info" | jq -r '.project_id')
-            echo "SCAN_ID=$SCAN_ID" >> $GITHUB_ENV
-            echo "PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
-          else
-            echo "Error: Failed to start the scan."
-            echo "$scan_info"
-            exit 1
-          fi
+          scan_info=$(aquilax scan --org-id "6691108b1985981c1f5d5b93" --group-id "66cc51d790da713a3f7c6075" --git-uri "${{ github.repository_url }}" --scanners "sast_scanner" "iac_scanner" --public True --frequency Once --tags "cicd" "audit")
+          echo "$scan_info" | jq
+          SCAN_ID=$(echo "$scan_info" | jq -r '.scan_id')
+          PROJECT_ID=$(echo "$scan_info" | jq -r '.project_id')
+          echo "SCAN_ID=$SCAN_ID" >> $GITHUB_ENV
+          echo "PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
 
       - name: Poll for Scan Completion
         run: |
@@ -64,29 +53,24 @@ jobs:
             fi
           done
 
-      - name: Check for Vulnerabilities and Fail/Continue Pipeline
-        id: check_vulns
+      - name: Save Scan Results
         run: |
-          scan_status=$(aquilax get-scan-details --org-id "6691108b1985981c1f5d5b93" --group-id "66cc51d790da713a3f7c6075" --project-id "$PROJECT_ID" --scan-id "$SCAN_ID")
-          echo "$scan_status" > scan_results.json
-          cat scan_results.json
-          
-          # Check for vulnerabilities
+          scan_results=$(aquilax get-scan-details --org-id "6691108b1985981c1f5d5b93" --group-id "66cc51d790da713a3f7c6075" --project-id "$PROJECT_ID" --scan-id "$SCAN_ID")
+          echo "$scan_results" > scan_results.json
+
+      - name: Upload Scan Results
+        uses: actions/upload-artifact@v2
+        with:
+          name: aquilax-scan-results
+          path: scan_results.json
+
+      - name: Check for Vulnerabilities
+        run: |
           vulns=$(jq -r '.scan.results[] | select(.findings != null) | .findings[]' scan_results.json)
           if [[ -n "$vulns" ]]; then
-            echo "Vulnerabilities found!"
-            if [[ "$FAIL_ON_VULNS" == "true" ]]; then
-              echo "Failing the pipeline due to vulnerabilities..."
-              exit 1
-            else
-              echo "Continuing despite vulnerabilities (FAIL_ON_VULNS=false)..."
-            fi
+            vuln_count=$(echo "$vulns" | wc -l)
+            echo "$vuln_count vulnerabilities found!"
+            exit 1
           else
             echo "No vulnerabilities found."
           fi
-
-      - name: Upload scan results
-        uses: actions/upload-artifact@v2
-        with:
-          name: scan-results
-          path: scan_results.json
