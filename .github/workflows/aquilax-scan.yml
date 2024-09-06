@@ -32,7 +32,7 @@ jobs:
           AQUILAX_AUTH: ${{ secrets.AQUILAX_API_TOKEN }}
         run: |
           scan_info=$(aquilax scan --org-id "6691108b1985981c1f5d5b93" --group-id "66cc51d790da713a3f7c6075" --git-uri "https://github.com/AquilaX-AI/vulnapp-python" --scanners "sast_scanner" "iac_scanner" --public True --frequency Once --tags "cicd" "audit")
-          echo "$scan_info" | jq
+          echo "$scan_info" | jq .
           SCAN_ID=$(echo "$scan_info" | jq -r '.scan_id')
           PROJECT_ID=$(echo "$scan_info" | jq -r '.project_id')
           echo "SCAN_ID=$SCAN_ID" >> $GITHUB_ENV
@@ -41,16 +41,24 @@ jobs:
       - name: Poll for Scan Completion
         run: |
           while true; do
-            scan_status=$(aquilax get-scan-details --org-id "6691108b1985981c1f5d5b93" --group-id "66cc51d790da713a3f7c6075" --project-id "$PROJECT_ID" --scan-id "$SCAN_ID")
-            echo "$scan_status" | jq
-            status=$(echo "$scan_status" | jq -r '.scan.status')
-            if [ "$status" = "COMPLETED" ]; then
-              echo "Scan completed!"
-              break
+            scan_status=$(aquilax get-scan-details --org-id "6691108b1985981c1f5d5b93" --group-id "66cc51d790da713a3f7c6075" --project-id "$PROJECT_ID" --scan-id "$SCAN_ID" 2>&1)
+            
+            # Output scan status for debugging
+            echo "Scan Status Output: $scan_status"
+
+            # Check if response is a valid JSON
+            if echo "$scan_status" | jq . >/dev/null 2>&1; then
+              status=$(echo "$scan_status" | jq -r '.scan.status')
+              if [ "$status" = "COMPLETED" ]; then
+                echo "Scan completed!"
+                break
+              else
+                echo "Scan status: $status. Waiting for 30 seconds..."
+              fi
             else
-              echo "Scan status: $status. Waiting for 30 seconds..."
-              sleep 30
+              echo "Error: Invalid JSON response. Retrying in 30 seconds..."
             fi
+            sleep 30
           done
 
       - name: Save Scan Results
