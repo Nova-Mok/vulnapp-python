@@ -9,7 +9,8 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     env:
-      FAIL_ON_VULNS: true
+      FAIL_ON_VULNS: true 
+      AQUILAX_AUTH: ${{ secrets.AQUILAX_API_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -28,6 +29,11 @@ jobs:
       - name: Start Aquilax Scan
         id: start_scan
         run: |
+          if [ -z "$AQUILAX_AUTH" ]; then
+            echo "AQUILAX_AUTH environment variable is not set. Please set it in your GitHub Secrets."
+            exit 1
+          fi
+
           scan_info=$(aquilax scan --org-id "6691108b1985981c1f5d5b93" --group-id "66cc51d790da713a3f7c6075" --git-uri "https://github.com/AquilaX-AI/vulnapp-python" --scanners "sast_scanner" "iac_scanner" --public True --frequency Once --tags "cicd" "audit")
           
           # Check if scan started successfully
