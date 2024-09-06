@@ -8,6 +8,9 @@ on:
 jobs:
   scan:
     runs-on: ubuntu-latest
+    env:
+      FAIL_ON_VULNS: true
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -58,11 +61,11 @@ jobs:
           vulns=$(jq -r '.scan.results[] | select(.findings != null) | .findings[]' scan_results.json)
           if [[ -n "$vulns" ]]; then
             echo "Vulnerabilities found!"
-            if [[ "${{ inputs.fail_on_vulns }}" == "true" ]]; then
+            if [[ "${{ env.FAIL_ON_VULNS }}" == "true" ]]; then
               echo "Failing the pipeline due to vulnerabilities..."
               exit 1
             else
-              echo "Continuing despite vulnerabilities (fail_on_vulns=false)..."
+              echo "Continuing despite vulnerabilities (FAIL_ON_VULNS=false)..."
             fi
           else
             echo "No vulnerabilities found."
@@ -73,9 +76,3 @@ jobs:
         with:
           name: scan-results
           path: scan_results.json
-
-inputs:
-  fail_on_vulns:
-    description: 'Set to true to fail the pipeline on vulnerabilities, false to continue'
-    required: true
-    default: 'true'
