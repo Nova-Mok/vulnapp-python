@@ -33,9 +33,10 @@ jobs:
         run: |
           scan_info=$(aquilax scan --org-id "6691108b1985981c1f5d5b93" --group-id "66cc51d790da713a3f7c6075" --git-uri "https://github.com/AquilaX-AI/vulnapp-python" --scanners "sast_scanner" "iac_scanner" --public True --frequency Once --tags "cicd" "audit")
           echo "Scan Info: $scan_info"
-          # Extract SCAN_ID and PROJECT_ID
-          SCAN_ID=$(echo "$scan_info" | jq -r '.scan_id')
-          PROJECT_ID=$(echo "$scan_info" | jq -r '.project_id')
+
+          # Extract SCAN_ID and PROJECT_ID using grep and sed
+          SCAN_ID=$(echo "$scan_info" | grep -oP "'scan_id': '\K[^']+")
+          PROJECT_ID=$(echo "$scan_info" | grep -oP "'project_id': '\K[^']+")
 
           if [[ -z "$SCAN_ID" || -z "$PROJECT_ID" ]]; then
             echo "Failed to extract SCAN_ID or PROJECT_ID"
