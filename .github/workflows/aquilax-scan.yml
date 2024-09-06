@@ -1,15 +1,12 @@
-name: AquilaX Security Scan
+name: Aquilax Scan
 
 on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
-  aquilax_scan:
+  scan:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,26 +16,48 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.x'
+          python-version: '3.8'
 
-      - name: Install Dependencies
-        run: pip install aquilax==1.1.6
+      - name: Install Aquilax client
+        run: |
+          pip install aquilax==1.1.6
 
-      - name: Run AquilaX Scan
+      - name: Start Aquilax Scan
+        id: start-scan
         env:
           AQUILAX_AUTH: ${{ secrets.AQUILAX_API_TOKEN }}
         run: |
-          aquilax scan --org-id "6691108b1985981c1f5d5b93" --group-id "66cc51d790da713a3f7c6075" --git-uri "https://github.com/AquilaX-AI/vulnapp-python" --scanners "sast_scanner" "iac_scanner" --public True --frequency Once --tags "cicd" "audit"
+          scan_info=$(aquilax scan --org-id "6691108b1985981c1f5d5b93" --group-id "66cc51d790da713a3f7c6075" --git-uri "https://github.com/AquilaX-AI/vulnapp-python" --scanners "sast_scanner" "iac_scanner" --public True --frequency Once --tags "cicd" "audit")
+          echo "Scan Info: $scan_info"
+          # Extract scan_id and project_id from the response
+          echo "SCAN_ID=$(echo $scan_info | grep -oP '(?<=\"scan_id\":\s?\")\w+') >> $GITHUB_ENV"
+          echo "PROJECT_ID=$(echo $scan_info | grep -oP '(?<=\"project_id\":\s?\")\w+') >> $GITHUB_ENV"
+
+      - name: Poll Scan Status
+        id: poll-scan
+        env:
+          AQUILAX_AUTH: ${{ secrets.AQUILAX_API_TOKEN }}
+        run: |
+          # Poll the scan status every 30 seconds until it's complete
+          for i in {1..20}; do
+            scan_status=$(aquilax get-scan-details --org-id "6691108b1985981c1f5d5b93" --group-id "66cc51d790da713a3f7c6075" --project-id ${{ env.PROJECT_ID }} --scan-id ${{ env.SCAN_ID }})
+            echo "Scan Status: $scan_status"
+            if echo "$scan_status" | grep -q '"status": "COMPLETED"'; then
+              echo "Scan completed successfully"
+              break
+            fi
+            if echo "$scan_status" | grep -q '"status": "FAILED"'; then
+              echo "Scan failed"
+              exit 1
+            fi
+            echo "Waiting for scan to complete..."
+            sleep 30
+          done
 
       - name: Upload Scan Results
-        if: always()
-        uses: actions/upload-artifact@v2
-        with:
-          name: aquilax-scan-results
-          path: results.json
-
-      - name: Check for Vulnerabilities
-        if: ${{ steps.run_aquilax_scan.outcome == 'failure' }}
+        if: success()
         run: |
-          echo "Vulnerabilities detected. See results.json for details."
-          exit 1
+          # Optionally, upload the scan results as an artifact
+          aquilax get-scan-details --org-id "6691108b1985981c1f5d5b93" --group-id "66cc51d790da713a3f7c6075" --project-id ${{ env.PROJECT_ID }} --scan-id ${{ env.SCAN_ID }} > scan-results.json
+          cat scan-results.json
+          echo "Scan results uploaded"
