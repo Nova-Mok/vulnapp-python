@@ -70,40 +70,42 @@ jobs:
         env:
           AQUILAX_AUTH: ${{ secrets.AQUILAX_API_TOKEN }}
         run: |
-          max_attempts=20
+          max_attempts=40  # Increase attempts to handle longer scan times
           attempt=0
           success=0  # A flag to check for completion
           while [ $attempt -lt $max_attempts ]; do
+            echo "Polling scan status (Attempt $((attempt+1))/$max_attempts)..."
             scan_status=$(aquilax get-scan-details \
               --org-id "6691108b1985981c1f5d5b93" \
               --group-id "66cc51d790da713a3f7c6075" \
               --project-id "$PROJECT_ID" \
               --scan-id "$SCAN_ID")
 
-            echo "Raw scan status: $scan_status"
-            
-            # Parse the status from the scan details using correct jq path
-            status=$(echo "$scan_status" | jq -r '.scan.status')
-
-            # Debugging: Print out the parsed status
-            echo "Parsed scan status: $status"
-
-            # Add a check to see if status is empty or not set
-            if [ -z "$status" ]; then
-              echo "Scan status is empty or not set. Attempt $((attempt+1))/$max_attempts."
-            elif [ "$status" = "COMPLETED" ]; then
-              echo "Scan completed!"
-              success=1
-              break
-            elif [ "$status" = "FAILED" ]; then
-              echo "Scan failed!"
-              exit 1
+            # Check if scan_status was retrieved successfully
+            if [ -z "$scan_status" ]; then
+              echo "Failed to retrieve scan status. Retrying..."
             else
-              echo "Scan status: $status. Attempt $((attempt+1))/$max_attempts. Waiting for 30 seconds..."
+              echo "Raw scan status: $scan_status"
+
+              # Parse the status from the scan details using correct jq path
+              status=$(echo "$scan_status" | jq -r '.scan.status')
+
+              # Debugging: Print out the parsed status
+              echo "Parsed scan status: $status"
+
+              if [ "$status" = "COMPLETED" ]; then
+                echo "Scan completed!"
+                success=1
+                break
+              elif [ "$status" = "FAILED" ]; then
+                echo "Scan failed!"
+                exit 1
+              fi
             fi
 
-            # Wait 30 seconds and retry
-            sleep 30
+            # Wait 60 seconds before retrying
+            echo "Waiting for 60 seconds before retrying..."
+            sleep 60
             ((attempt++))
           done
           
