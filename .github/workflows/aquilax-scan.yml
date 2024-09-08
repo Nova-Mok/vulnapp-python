@@ -115,34 +115,24 @@ jobs:
           fi
 
       - name: Check for Vulnerabilities
-        id: check_vulns
         env:
           AQUILAX_AUTH: ${{ secrets.AQUILAX_API_TOKEN }}
         run: |
-          scan_status=$(aquilax get-scan-details \
+          # Retrieve the scan results to check for vulnerabilities
+          scan_results=$(aquilax get-scan-results \
             --org-id "6691108b1985981c1f5d5b93" \
             --group-id "66cc51d790da713a3f7c6075" \
             --project-id "$PROJECT_ID" \
             --scan-id "$SCAN_ID")
-          echo "$scan_status" > scan_results.json
-          
-          # Check for vulnerabilities
-          vulns=$(jq -r '.scan.results[] | select(.findings != null) | .findings[]' scan_results.json)
-          if [[ -n "$vulns" ]]; then
-            echo "Vulnerabilities found!"
-            echo "$vulns"
-            if [[ "${{ secrets.FAIL_ON_VULNS }}" == "true" ]]; then
-              echo "Failing the pipeline due to vulnerabilities..."
-              exit 1
-            else
-              echo "Continuing despite vulnerabilities..."
-            fi
-          else
-            echo "No vulnerabilities found."
-          fi
 
-      - name: Upload Scan Results
-        uses: actions/upload-artifact@v3
-        with:
-          name: aquilax-scan-results
-          path: scan_results.json
+          echo "Scan Results: $scan_results"
+
+          # Check if the scan results contain any high severity vulnerabilities
+          high_severity=$(echo "$scan_results" | jq '[.vulnerabilities[] | select(.severity == "HIGH")] | length')
+
+          if [ "$high_severity" -gt 0 ]; then
+            echo "High severity vulnerabilities detected: $high_severity"
+            exit 1
+          else
+            echo "No high severity vulnerabilities detected."
+          fi
