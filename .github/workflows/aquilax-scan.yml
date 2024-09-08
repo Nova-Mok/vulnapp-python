@@ -90,7 +90,6 @@ jobs:
             # Add a check to see if status is empty or not set
             if [ -z "$status" ]; then
               echo "Scan status is empty or not set. Attempt $((attempt+1))/$max_attempts."
-
             elif [ "$status" = "COMPLETED" ]; then
               echo "Scan completed!"
               break
@@ -101,7 +100,8 @@ jobs:
               echo "Scan status: $status. Attempt $((attempt+1))/$max_attempts. Waiting for 30 seconds..."
             fi
 
-            sleep 10
+            # Wait 30 seconds and retry
+            sleep 30
             ((attempt++))
           done
           
