@@ -40,15 +40,22 @@ jobs:
             --frequency Once \
             --tags cicd audit)
 
-          echo "Scan Output:"
-          echo "$scan_output"
+          echo "Raw Scan Output: $scan_output"
 
-          # Convert scan_output to JSON format
-          scan_json=$(echo "$scan_output" | sed "s/\'/\"/g")
+          # Remove any potential whitespace from the scan output
+          scan_output=$(echo "$scan_output" | tr -d '\n' | tr -d '\r')
+
+          # Validate if the scan_output is a valid JSON
+          if echo "$scan_output" | jq empty; then
+            echo "Valid JSON detected."
+          else
+            echo "Invalid JSON detected in scan output."
+            exit 1
+          fi
 
           # Parse scan_id and project_id using jq
-          SCAN_ID=$(echo "$scan_json" | jq -r '.scan_id')
-          PROJECT_ID=$(echo "$scan_json" | jq -r '.project_id')
+          SCAN_ID=$(echo "$scan_output" | jq -r '.scan_id')
+          PROJECT_ID=$(echo "$scan_output" | jq -r '.project_id')
 
           if [[ -z "$SCAN_ID" || -z "$PROJECT_ID" ]]; then
             echo "Failed to extract SCAN_ID or PROJECT_ID"
