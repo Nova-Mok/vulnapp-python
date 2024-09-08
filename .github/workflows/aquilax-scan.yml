@@ -83,7 +83,7 @@ jobs:
 
             # Check if scan_status was retrieved successfully
             if [ -z "$scan_status" ]; then
-              echo "Failed to retrieve scan status. Retrying..."
+              echo "Failed to retrieve scan status. Retrying.."
             else
               echo "Raw scan status: $scan_status"
 
@@ -118,21 +118,26 @@ jobs:
         env:
           AQUILAX_AUTH: ${{ secrets.AQUILAX_API_TOKEN }}
         run: |
-          # Retrieve the scan results to check for vulnerabilities
+          # Fetch the scan results after completion
           scan_results=$(aquilax get-scan-results \
             --org-id "6691108b1985981c1f5d5b93" \
             --group-id "66cc51d790da713a3f7c6075" \
             --project-id "$PROJECT_ID" \
             --scan-id "$SCAN_ID")
 
-          echo "Scan Results: $scan_results"
+          echo "Raw scan results: $scan_results"
 
-          # Check if the scan results contain any high severity vulnerabilities
-          high_severity=$(echo "$scan_results" | jq '[.vulnerabilities[] | select(.severity == "HIGH")] | length')
+          # Check if scan_results was retrieved successfully
+          if [ -z "$scan_results" ]; then
+            echo "Failed to retrieve scan results."
+            exit 1
+          fi
 
-          if [ "$high_severity" -gt 0 ]; then
-            echo "High severity vulnerabilities detected: $high_severity"
+          # Check for vulnerabilities in the scan results
+          vuln_count=$(echo "$scan_results" | jq '.vulnerabilities | length')
+          if [ "$vuln_count" -gt 0 ]; then
+            echo "$vuln_count vulnerabilities found!"
             exit 1
           else
-            echo "No high severity vulnerabilities detected."
+            echo "No vulnerabilities found."
           fi
