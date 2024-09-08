@@ -41,8 +41,9 @@ jobs:
           
           echo "Scan Info: $scan_info"
           
-          SCAN_ID=$(echo "$scan_info" | python3 -c "import sys, json; print(json.loads(sys.stdin.read())['scan_id'])")
-          PROJECT_ID=$(echo "$scan_info" | python3 -c "import sys, json; print(json.loads(sys.stdin.read())['project_id'])")
+          # Use Python to parse the output as a Python dictionary
+          SCAN_ID=$(echo "$scan_info" | python3 -c "import sys, ast; print(ast.literal_eval(sys.stdin.read())['scan_id'])")
+          PROJECT_ID=$(echo "$scan_info" | python3 -c "import sys, ast; print(ast.literal_eval(sys.stdin.read())['project_id'])")
           
           if [[ -z "$SCAN_ID" || -z "$PROJECT_ID" ]]; then
             echo "Failed to extract SCAN_ID or PROJECT_ID"
