@@ -30,6 +30,7 @@ jobs:
         env:
           AQUILAX_AUTH: ${{ secrets.AQUILAX_API_TOKEN }}
         run: |
+          # Run the scan and capture the output
           scan_output=$(aquilax scan \
             --org-id "6691108b1985981c1f5d5b93" \
             --group-id "66cc51d790da713a3f7c6075" \
@@ -42,10 +43,9 @@ jobs:
           echo "Scan Output:"
           echo "$scan_output"
           
-          # Extract scan_id and project_id using grep
-          scan_info=$(echo "$scan_output" | grep -oP "{'scan_id': '\K[^']*|'project_id': '\K[^']*")
-          SCAN_ID=$(echo "$scan_info" | sed -n 1p)
-          PROJECT_ID=$(echo "$scan_info" | sed -n 2p)
+          # Parse scan_id and project_id using jq
+          SCAN_ID=$(echo "$scan_output" | jq -r '.scan_id')
+          PROJECT_ID=$(echo "$scan_output" | jq -r '.project_id')
           
           if [[ -z "$SCAN_ID" || -z "$PROJECT_ID" ]]; then
             echo "Failed to extract SCAN_ID or PROJECT_ID"
