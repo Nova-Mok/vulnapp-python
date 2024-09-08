@@ -22,7 +22,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install aquilax==1.1.8
+          pip install aquilax==1.1.9
           sudo apt-get update && sudo apt-get install -y jq
 
       - name: Run AquilaX Scan
