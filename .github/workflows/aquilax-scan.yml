@@ -30,7 +30,7 @@ jobs:
         env:
           AQUILAX_AUTH: ${{ secrets.AQUILAX_API_TOKEN }}
         run: |
-          scan_info=$(aquilax scan \
+          scan_output=$(aquilax scan \
             --org-id "6691108b1985981c1f5d5b93" \
             --group-id "66cc51d790da713a3f7c6075" \
             --git-uri "https://github.com/AquilaX-AI/vulnapp-python" \
@@ -39,15 +39,17 @@ jobs:
             --frequency Once \
             --tags cicd audit)
           
-          echo "Scan Info: $scan_info"
+          echo "Scan Output:"
+          echo "$scan_output"
           
-          # Use Python to parse the output as a Python dictionary
-          SCAN_ID=$(echo "$scan_info" | python3 -c "import sys, ast; print(ast.literal_eval(sys.stdin.read())['scan_id'])")
-          PROJECT_ID=$(echo "$scan_info" | python3 -c "import sys, ast; print(ast.literal_eval(sys.stdin.read())['project_id'])")
+          # Extract scan_id and project_id using grep
+          scan_info=$(echo "$scan_output" | grep -oP "{'scan_id': '\K[^']*|'project_id': '\K[^']*")
+          SCAN_ID=$(echo "$scan_info" | sed -n 1p)
+          PROJECT_ID=$(echo "$scan_info" | sed -n 2p)
           
           if [[ -z "$SCAN_ID" || -z "$PROJECT_ID" ]]; then
             echo "Failed to extract SCAN_ID or PROJECT_ID"
-            echo "Raw scan info: $scan_info"
+            echo "Raw scan output: $scan_output"
             exit 1
           fi
           echo "SCAN_ID=$SCAN_ID" >> $GITHUB_ENV
