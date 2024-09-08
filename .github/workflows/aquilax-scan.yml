@@ -72,6 +72,7 @@ jobs:
         run: |
           max_attempts=20
           attempt=0
+          success=0  # A flag to check for completion
           while [ $attempt -lt $max_attempts ]; do
             scan_status=$(aquilax get-scan-details \
               --org-id "6691108b1985981c1f5d5b93" \
@@ -92,6 +93,7 @@ jobs:
               echo "Scan status is empty or not set. Attempt $((attempt+1))/$max_attempts."
             elif [ "$status" = "COMPLETED" ]; then
               echo "Scan completed!"
+              success=1
               break
             elif [ "$status" = "FAILED" ]; then
               echo "Scan failed!"
@@ -105,7 +107,7 @@ jobs:
             ((attempt++))
           done
           
-          if [ $attempt -eq $max_attempts ]; then
+          if [ $success -eq 0 ]; then
             echo "Scan did not complete within the expected time."
             exit 1
           fi
