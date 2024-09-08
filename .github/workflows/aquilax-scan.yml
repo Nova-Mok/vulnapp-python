@@ -83,7 +83,7 @@ jobs:
 
             # Check if scan_status was retrieved successfully
             if [ -z "$scan_status" ]; then
-              echo "Failed to retrieve scan status. Retrying.."
+              echo "Failed to retrieve scan status. Retrying..."
             else
               echo "Raw scan status: $scan_status"
 
@@ -118,25 +118,30 @@ jobs:
         env:
           AQUILAX_AUTH: ${{ secrets.AQUILAX_API_TOKEN }}
         run: |
-          # Fetch the scan results after completion
+          echo "Fetching scan results..."
           scan_results=$(aquilax get-scan-results \
             --org-id "6691108b1985981c1f5d5b93" \
             --group-id "66cc51d790da713a3f7c6075" \
             --project-id "$PROJECT_ID" \
             --scan-id "$SCAN_ID")
 
+          # Print raw scan results
           echo "Raw scan results: $scan_results"
 
-          # Check if scan_results was retrieved successfully
-          if [ -z "$scan_results" ]; then
-            echo "Failed to retrieve scan results."
+          # Validate if scan results is a valid JSON
+          if echo "$scan_results" | jq empty; then
+            echo "Valid JSON detected for scan results."
+          else
+            echo "Invalid JSON detected in scan results."
             exit 1
           fi
 
-          # Check for vulnerabilities in the scan results
-          vuln_count=$(echo "$scan_results" | jq '.vulnerabilities | length')
+          # Check if there are any vulnerabilities
+          vuln_count=$(echo "$scan_results" | jq -r '.vulnerabilities | length')
+
           if [ "$vuln_count" -gt 0 ]; then
-            echo "$vuln_count vulnerabilities found!"
+            echo "Vulnerabilities found in the scan results!"
+            echo "$scan_results" | jq '.vulnerabilities'
             exit 1
           else
             echo "No vulnerabilities found."
