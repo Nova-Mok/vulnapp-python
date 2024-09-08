@@ -78,9 +78,17 @@ jobs:
               --group-id "66cc51d790da713a3f7c6075" \
               --project-id "$PROJECT_ID" \
               --scan-id "$SCAN_ID")
-            echo "$scan_status" | jq
+
+            echo "Raw scan status: $scan_status"
+            
+            # Parse the status from the scan details
             status=$(echo "$scan_status" | jq -r '.scan.status')
-            if [ "$status" = "COMPLETED" ]; then
+
+            # Add a check to see if status is empty or not set
+            if [ -z "$status" ]; then
+              echo "Scan status is empty or not set. Attempt $((attempt+1))/$max_attempts."
+              echo "Waiting for 30 seconds before retrying..."
+            elif [ "$status" = "COMPLETED" ]; then
               echo "Scan completed!"
               break
             elif [ "$status" = "FAILED" ]; then
@@ -88,9 +96,10 @@ jobs:
               exit 1
             else
               echo "Scan status: $status. Attempt $((attempt+1))/$max_attempts. Waiting for 30 seconds..."
-              sleep 30
-              ((attempt++))
             fi
+
+            sleep 10
+            ((attempt++))
           done
           
           if [ $attempt -eq $max_attempts ]; then
