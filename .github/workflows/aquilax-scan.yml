@@ -41,11 +41,12 @@ jobs:
           
           echo "Scan Info: $scan_info"
           
-          SCAN_ID=$(echo "$scan_info" | jq -r '.scan_id')
-          PROJECT_ID=$(echo "$scan_info" | jq -r '.project_id')
+          SCAN_ID=$(echo "$scan_info" | python3 -c "import sys, json; print(json.loads(sys.stdin.read())['scan_id'])")
+          PROJECT_ID=$(echo "$scan_info" | python3 -c "import sys, json; print(json.loads(sys.stdin.read())['project_id'])")
           
           if [[ -z "$SCAN_ID" || -z "$PROJECT_ID" ]]; then
             echo "Failed to extract SCAN_ID or PROJECT_ID"
+            echo "Raw scan info: $scan_info"
             exit 1
           fi
           echo "SCAN_ID=$SCAN_ID" >> $GITHUB_ENV
