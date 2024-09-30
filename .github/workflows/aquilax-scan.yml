@@ -36,7 +36,6 @@ jobs:
           AQUILAX_AUTH: ${{ secrets.AQUILAX_API_TOKEN }}
         run: |
           GIT_URL="https://github.com/${{ github.repository }}.git"
-          echo "Using Git URL: $GIT_URL"
           aquilax ci-scan \
             "$GIT_URL" \
             --org-id "$ORG_ID" \
