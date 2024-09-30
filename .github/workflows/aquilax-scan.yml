@@ -2,132 +2,52 @@ name: AquilaX Security Scan
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
 
 jobs:
   aquilax_scan:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-
-      - name: Install Dependencies
+      - name: Install AquilaX CLI
         run: |
-          pip install aquilax==1.1.10
-          sudo apt-get update && sudo apt-get install -y jq
+          pip install aquilax
+
+      - name: AquilaX Login and Set Defaults
+        env:
+          AQUILAX_API_TOKEN: ${{ secrets.AQUILAX_API_TOKEN }}
+          AQUILAX_ORG_ID: ${{ secrets.AQUILAX_ORG_ID }}
+          AQUILAX_GROUP_ID: ${{ secrets.AQUILAX_GROUP_ID }}
+        run: |
+          aquilax login "$AQUILAX_API_TOKEN"
+          aquilax --set-org "$AQUILAX_ORG_ID"
+          aquilax --set-group "$AQUILAX_GROUP_ID"
 
       - name: Run AquilaX Scan
-        id: start_scan
-        env:
-          AQUILAX_AUTH: ${{ secrets.AQUILAX_API_TOKEN }}
         run: |
-          # Run the scan and capture the output
-          scan_output=$(aquilax scan \
-            --org-id "6691108b1985981c1f5d5b93" \
-            --group-id "66cc51d790da713a3f7c6075" \
-            --git-uri "https://github.com/AquilaX-AI/vulnapp-python" \
-            --scanners sast_scanner iac_scanner \
-            --public true \
-            --frequency Once \
-            --tags cicd audit)
+          echo "Starting AquilaX Security Scan..."
+          aquilax scan "${{ github.repository_url }}" --sync --format sarif > results.sarif
 
-          echo "Raw Scan Output: $scan_output"
-
-          # Remove any potential whitespace from the scan output
-          scan_output=$(echo "$scan_output" | tr -d '\n' | tr -d '\r')
-
-          # Validate if the scan_output is a valid JSON
-          if echo "$scan_output" | jq empty; then
-            echo "Valid JSON detected."
-          else
-            echo "Invalid JSON detected in scan output."
-            exit 1
-          fi
-
-          # Parse scan_id and project_id using jq
-          SCAN_ID=$(echo "$scan_output" | jq -r '.scan_id')
-          PROJECT_ID=$(echo "$scan_output" | jq -r '.project_id')
-
-          if [[ -z "$SCAN_ID" || -z "$PROJECT_ID" ]]; then
-            echo "Failed to extract SCAN_ID or PROJECT_ID"
-            echo "Raw scan output: $scan_output"
-            exit 1
-          fi
-          echo "SCAN_ID=$SCAN_ID" >> $GITHUB_ENV
-          echo "PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
-          echo "Scan started with SCAN_ID=$SCAN_ID and PROJECT_ID=$PROJECT_ID"
-
-      - name: Poll for Scan Completion
-        env:
-          AQUILAX_AUTH: ${{ secrets.AQUILAX_API_TOKEN }}
-        run: |
-          max_attempts=40
-          attempt=0
-          success=0  # A flag to check for completion
-          while [ $attempt -lt $max_attempts ]; do
-            echo "Polling scan status (Attempt $((attempt+1))/$max_attempts)..."
-            scan_status=$(aquilax get-scan-details \
-              --org-id "6691108b1985981c1f5d5b93" \
-              --group-id "66cc51d790da713a3f7c6075" \
-              --project-id "$PROJECT_ID" \
-              --scan-id "$SCAN_ID")
-
-            if [ -z "$scan_status" ]; then
-              echo "Failed to retrieve scan status. Retrying..."
-            else
-              echo "Raw scan status: $scan_status"
-
-              status=$(echo "$scan_status" | jq -r '.scan.status')
-              echo "Parsed scan status: $status"
-
-              if [ "$status" = "COMPLETED" ]; then
-                echo "Scan completed!"
-                success=1
-                break
-              elif [ "$status" = "FAILED" ]; then
-                echo "Scan failed!"
-                exit 1
-              fi
-            fi
-
-            echo "Waiting for 60 seconds before retrying..."
-            sleep 60
-            ((attempt++))
-          done
-          
-          if [ $success -eq 0 ]; then
-            echo "Scan did not complete within the expected time."
-            exit 1
-          fi
+      - name: Upload SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: results.sarif
 
       - name: Check for Vulnerabilities
-        env:
-          AQUILAX_AUTH: ${{ secrets.AQUILAX_API_TOKEN }}
         run: |
-          # Fetch the scan results
-          scan_results=$(aquilax get-scan-results \
-            --org-id "6691108b1985981c1f5d5b93" \
-            --group-id "66cc51d790da713a3f7c6075" \
-            --project-id "$PROJECT_ID" \
-            --scan-id "$SCAN_ID")
-
-          echo "Raw scan results: $scan_results"
-
-          # Check if the scan results contain any vulnerabilities
-          vulnerabilities=$(echo "$scan_results" | jq '.results[] | select(.findings != null) | .findings | length > 0')
-
-          if [ -n "$vulnerabilities" ]; then
-            echo "Vulnerabilities found in the scan results:"
-            echo "$scan_results" | jq '.results[] | select(.findings != null) | .findings[]'
+          echo "Analyzing scan results..."
+          vulnerabilities=$(jq '[.runs[].results[]] | length' results.sarif)
+          echo "Vulnerabilities found: $vulnerabilities"
+          if [ "$vulnerabilities" -gt 0 ]; then
+            echo "::error::Scan completed with vulnerabilities!"
             exit 1
           else
             echo "No vulnerabilities found."
