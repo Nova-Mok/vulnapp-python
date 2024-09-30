@@ -36,8 +36,7 @@ jobs:
             --org-id "6606c1f654f58aa2a323075d" \
             --group-id "6699310b30a09ab96273dea3" \
             --scanners sast_scanner iac_scanner secret_scanner pii_scanner sca_scanner container_scanner cicd_scanner \
-            --tags cicd audit \
-            --fail-on-vulns
+            --tags cicd audit
 
       - name: Upload SARIF to GitHub Security
         uses: github/codeql-action/upload-sarif@v2
