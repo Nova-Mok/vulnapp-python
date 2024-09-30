@@ -34,7 +34,7 @@ jobs:
       - name: Run AquilaX Scan
         run: |
           echo "Starting AquilaX Security Scan..."
-          aquilax scan "${{ github.repository_url }}" --sync --format sarif > results.sarif
+          aquilax scan "${{ github.repository_url }}" --sync
 
       - name: Upload SARIF to GitHub Security
         uses: github/codeql-action/upload-sarif@v2
