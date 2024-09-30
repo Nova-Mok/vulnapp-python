@@ -24,8 +24,8 @@ jobs:
       - name: AquilaX Login and Set Defaults
         env:
           AQUILAX_API_TOKEN: ${{ secrets.AQUILAX_API_TOKEN }}
-          AQUILAX_ORG_ID: ${{ secrets.AQUILAX_ORG_ID }}
-          AQUILAX_GROUP_ID: ${{ secrets.AQUILAX_GROUP_ID }}
+          AQUILAX_ORG_ID: "6691108b1985981c1f5d5b93"
+          AQUILAX_GROUP_ID: "66cc51d790da713a3f7c6075"
         run: |
           aquilax login "$AQUILAX_API_TOKEN"
           aquilax --set-org "$AQUILAX_ORG_ID"
