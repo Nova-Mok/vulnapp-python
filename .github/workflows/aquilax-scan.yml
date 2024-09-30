@@ -32,9 +32,22 @@ jobs:
           aquilax --set-group "$AQUILAX_GROUP_ID"
 
       - name: Run AquilaX Scan
+        id: start_scan
         run: |
           echo "Starting AquilaX Security Scan..."
-          aquilax scan "${{ github.repository_url }}" --sync
+          aquilax scan "${{ github.repository_url }}" --sync > scan-output.json
+
+          # Extract scan_id and project_id from the output
+          SCAN_ID=$(jq -r '.scan_id' scan-output.json)
+          PROJECT_ID=$(jq -r '.project_id' scan-output.json)
+          echo "Scan started with SCAN_ID=$SCAN_ID and PROJECT_ID=$PROJECT_ID"
+          echo "SCAN_ID=$SCAN_ID" >> $GITHUB_ENV
+          echo "PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
+
+      - name: Fetch Scan Details
+        run: |
+          echo "Fetching scan details..."
+          aquilax get scan-details --project-id "$PROJECT_ID" --scan-id "$SCAN_ID" --format sarif > results.sarif
 
       - name: Upload SARIF to GitHub Security
         uses: github/codeql-action/upload-sarif@v2
