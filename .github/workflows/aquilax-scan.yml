@@ -33,8 +33,8 @@ jobs:
         run: |
           aquilax ci-scan \
             "https://github.com/Nova-Mok/vulnapp-python" \
-            --org-id "6691108b1985981c1f5d5b93" \
-            --group-id "66cc51d790da713a3f7c6075" \
+            --org-id "6606c1f654f58aa2a323075d" \
+            --group-id "6699310b30a09ab96273dea3" \
             --scanners sast_scanner iac_scanner secret_scanner pii_scanner sca_scanner container_scanner cicd_scanner \
             --tags cicd audit \
             --fail-on-vulns
