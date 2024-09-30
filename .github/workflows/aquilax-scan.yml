@@ -35,7 +35,7 @@ jobs:
         id: start_scan
         run: |
           echo "Starting AquilaX Security Scan..."
-          aquilax scan https://github.com/Nova-Mok/vulnapp-python --sync > scan-output.json
+          aquilax scan https://github.com/Nova-Mok/vulnapp-python --sync
 
           # Extract scan_id and project_id from the output
           SCAN_ID=$(jq -r '.scan_id' scan-output.json)
