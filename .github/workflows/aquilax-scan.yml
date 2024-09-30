@@ -12,6 +12,10 @@ permissions:
   contents: read
   security-events: write
 
+env:
+  ORG_ID: "6606c1f654f58aa2a323075d"
+  GROUP_ID: "6699310b30a09ab96273dea3"
+
 jobs:
   aquilax_scan:
     runs-on: ubuntu-latest
@@ -27,14 +31,16 @@ jobs:
       - name: Install AquilaX CLI
         run: pip install aquilax
 
-      - name: Run AquilaX CI Scan
+      - name: AquilaX CI Scan
         env:
           AQUILAX_AUTH: ${{ secrets.AQUILAX_API_TOKEN }}
         run: |
+          GIT_URL="https://github.com/${{ github.repository }}.git"
+          echo "Using Git URL: $GIT_URL"
           aquilax ci-scan \
-            "https://github.com/Nova-Mok/vulnapp-python" \
-            --org-id "6606c1f654f58aa2a323075d" \
-            --group-id "6699310b30a09ab96273dea3" \
+            "$GIT_URL" \
+            --org-id "$ORG_ID" \
+            --group-id "$GROUP_ID" \
             --scanners sast_scanner iac_scanner secret_scanner pii_scanner sca_scanner container_scanner cicd_scanner \
             --tags cicd audit
 
